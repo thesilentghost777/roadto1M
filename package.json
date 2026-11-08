@@ -1,0 +1,9 @@
+{
+  "name": "road-to-1m",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Road to 1M : suivi partagé, base SQLite hébergée sur Netlify",
+  "type": "commonjs",
+  "scripts": { "start": "node server.js" },
+  "dependencies": { "@netlify/blobs": "^8.2.0" }
+}

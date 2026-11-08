@@ -1,0 +1,15 @@
+ROAD TO 1M - mise en ligne sur Netlify
+======================================
+1. Mettre ce dossier dans un depot GitHub (ou utiliser la CLI : npm i -g netlify-cli puis "netlify deploy --prod").
+2. Netlify > Add new site > Import from Git > choisir le depot. Rien a configurer (netlify.toml s'en charge).
+3. Ouvrir l'URL : les 4 personnes voient les memes donnees, stockees dans une vraie base SQLite
+   (fichier road-to-1m.sqlite) conservee cote Netlify (Netlify Blobs).
+
+Fichiers importants
+- data/road-to-1m.sqlite          : base SQLite de depart (schema + categories). Copiee cote Netlify au 1er acces.
+- netlify/functions/database.mjs  : lit/ecrit la base sur Netlify (sans mot de passe).
+- server.js                       : serveur local facultatif (node server.js).
+- make-seed.js                    : regenere data/road-to-1m.sqlite (node make-seed.js).
+
+ATTENTION : le glisser-deposer manuel d'un dossier sur Netlify ne gere pas bien les fonctions
+avec dependances. Utiliser GitHub ou la CLI Netlify.
