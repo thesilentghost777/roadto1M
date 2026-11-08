@@ -111,16 +111,16 @@ const q = (sql, p = []) => {
   st.free(); return rows;
 };
 const run = (sql, p = []) => { db.run(sql, p); dbDirty = true; };
-async function apiFetch(url, options = {}) {
+async function apiFetch(url, options = {}, allowedStatuses = []) {
   if (location.protocol === 'file:')
     throw new Error('Le site est ouvert directement depuis un fichier. Ouvrez l’adresse Netlify (https://…netlify.app), ou lancez « node server.js » puis http://localhost:3000.');
   const response = await fetch(url, { cache: 'no-store', ...options });
-  if (!response.ok && response.status !== 404 && response.status !== 409)
+  if (!response.ok && !allowedStatuses.includes(response.status))
     throw new Error(`Erreur serveur (${response.status}).`);
   return response;
 }
 async function loadRemote() {
-  const response = await apiFetch('/api/database');
+  const response = await apiFetch('/api/database', {}, [404]);
   if (response.status === 404) return null;
   serverETag = response.headers.get('X-DB-Version');
   return new Uint8Array(await response.arrayBuffer());
@@ -164,7 +164,7 @@ async function save() {
         ...(serverETag ? { 'X-If-Version': serverETag } : { 'X-New-Database': '1' }),
       },
       body: db.export(),
-    });
+    }, [409]);
     if (response.status === 409) {
       syncConflict = true; noIDB = true;
       toast('Données modifiées ailleurs : exportez cette copie, puis rechargez la page.');
