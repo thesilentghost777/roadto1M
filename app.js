@@ -479,6 +479,52 @@ function toast(m) {
 }
 const shake = el => { if (!el) return; el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); el.focus(); };
 
+let resetInProgress = false;
+const resetButton = document.createElement('button');
+resetButton.id = 'reset-db';
+resetButton.className = 'reset-db';
+resetButton.dataset.act = 'resetdb';
+resetButton.textContent = 'Réinitialiser la base';
+resetButton.hidden = true;
+document.body.appendChild(resetButton);
+
+let secretKeys = '';
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey || e.altKey || e.metaKey || e.key.length !== 1) return;
+  secretKeys = (secretKeys + e.key.toLowerCase()).slice(-5);
+  if (secretKeys === 'ghost') {
+    resetButton.hidden = false;
+    toast('Option de réinitialisation activée');
+  }
+});
+
+async function resetDatabase() {
+  if (resetInProgress || !confirm('Réinitialiser toute la base partagée ? Toutes les opérations, versements, disponibilités, tickets et catégories personnalisées seront supprimés. Cette action est irréversible.')) return;
+  resetInProgress = true;
+  resetButton.disabled = true;
+  const previousDb = db, previousDirty = dbDirty;
+  const freshDb = new SQL.Database();
+  db = freshDb;
+  dbDirty = false;
+  seed();
+  migrate();
+  const saved = await save();
+  if (!saved) {
+    freshDb.close();
+    db = previousDb;
+    dbDirty = previousDirty;
+    resetInProgress = false;
+    resetButton.disabled = false;
+    render();
+    return;
+  }
+  previousDb.close();
+  resetInProgress = false;
+  resetButton.disabled = false;
+  render();
+  toast('Base partagée réinitialisée');
+}
+
 async function addOp() {
   st.amount = $('#amt').value; st.note = $('#nt').value; st.date = $('#dt').value;
   const amount = parseAmt(st.amount);
@@ -541,7 +587,8 @@ async function importDB(file) {
 document.addEventListener('click', async e => {
   const b = e.target.closest('[data-act]'); if (!b) return;
   const id = b.dataset.id, act = b.dataset.act;
-  if (act === 'mode') { st.mode = b.dataset.v; st.cat = null; render(); $('#amt').focus(); }
+  if (act === 'resetdb') await resetDatabase();
+  else if (act === 'mode') { st.mode = b.dataset.v; st.cat = null; render(); $('#amt').focus(); }
   else if (act === 'cat') {
     st.cat = +id; st.amount = $('#amt').value;
     if (parseAmt(st.amount)) addOp(); else { render(); shake($('#amt')); }
@@ -639,7 +686,7 @@ async function init() {
   window.addEventListener('hashchange', () => { route(); render(); window.scrollTo(0, 0); });
   let day = today();
   async function refresh() {
-    if (dlg.open) return;
+    if (dlg.open || resetInProgress) return;
     const a = document.activeElement;
     if (a && a.tagName === 'INPUT') return;
     try {
